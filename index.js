@@ -6,13 +6,7 @@ var http = require("http");
 var Alexa = require("ask-sdk");
 var lambda = require("./skill.js");
 
-try {
-	global.config = JSON.parse(fs.readFileSync("config.json").toString());
-} catch (e) {
-	console.dir(e);
-	global.config = {port: 8033, youtube_channel: "<youtube-channel>", youtube_api_key: "<api-key>"};
-	fs.writeFileSync("config.json", JSON.stringify(config, null, "\t"));
-}
+global.config = loadJSONFile("config.json", {port: 8033, youtube_channel: "<youtube-channel-id>", youtube_api_key: "<api-key>"}, true);
 
 var skill = null;
 http.createServer((req, res) => {
@@ -45,4 +39,21 @@ http.createServer((req, res) => {
 		throw err;
 	}
 	console.log('Listening on :'+config.port);
-})
+});
+
+function exitHandler(options, err) {
+	if (err instanceof Error) {
+		console.dir(err);
+	}
+	saveJSONFile("config.json", config);
+	saveJSONFile("player-data.json", lambda.playerData);
+	if (options.exit)
+		process.exit();
+}
+
+process.on('exit', exitHandler.bind(null,{cleanup:true}));
+process.on('SIGINT', exitHandler.bind(null, {exit:true}));
+process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));
+process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
+process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
+process.on('unhandledRejection', err => exitHandler({},err));
