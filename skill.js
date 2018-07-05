@@ -3,7 +3,7 @@
 const fs = require("fs");
 const https = require('https');
 
-const youtubeAPIUrl = "https://www.googleapis.com/youtube/v3/activities?part=id%2Csnippet%2CcontentDetails&maxResults=50&channelId={CHANNEL_ID}&key={API_KEY}"
+const youtubeAPIUrl = "https://www.googleapis.com/youtube/v3/search?part=id%2Csnippet&channelId={CHANNEL_ID}&maxResults=50&order={ORDER}&key={API_KEY}"
 
 const { spawn } = require("child_process");
 
@@ -32,7 +32,11 @@ exports.requestHandlers = [
 	name: "PlayRandomTaleIntent",
 	_handle(handlerInput, user, slots, res, hasDisplay) {
 		return new Promise((resolve, reject) => {
-			httpsRequest(replaceParameters(youtubeAPIUrl, {api_key: config.youtube_api_key, channel_id: config.youtube_channel}))
+			httpsRequest(replaceParameters(youtubeAPIUrl, {
+					api_key: config.youtube_api_key, 
+					channel_id: config.youtube_channel,
+					order: "date"
+				}))
 				.then(body => {
 					if (!body.items) {
 						resolve(res.speak("Something went wrong. Try again later").getResponse());
@@ -41,10 +45,10 @@ exports.requestHandlers = [
 					} else {
 						var item = body.items.filter(item => item.snippet.type == "upload").random();
 
-						var link = item.contentDetails.upload.videoId;
+						var videoId = item.id.videoId;
 						var title = item.snippet.title;
 
-						getLink(link, hasDisplay).then(url => {
+						getLink(videoId, hasDisplay).then(url => {
 							if (url == null) {
 								resolve(res.speak("Video wasn't found. Try again later").getResponse());
 								return;
@@ -70,7 +74,11 @@ exports.requestHandlers = [
 	name: "PlayLatestTaleIntent",
 	_handle(handlerInput, user, slots, res, hasDisplay) {
 		return new Promise((resolve, reject) => {
-			httpsRequest(replaceParameters(youtubeAPIUrl, {api_key: config.youtube_api_key, channel_id: config.youtube_channel}))
+			httpsRequest(replaceParameters(youtubeAPIUrl, {
+					api_key: config.youtube_api_key, 
+					channel_id: config.youtube_channel,
+					order: "date"
+				}))
 				.then(body => {
 					if (!body.items) {
 						resolve(res.speak("Something went wrong. Try again later").getResponse());
@@ -83,10 +91,10 @@ exports.requestHandlers = [
 						}
 						var item = body.items.filter(item => item.snippet.type == "upload")[handlerInput.__latestCount || 0];
 
-						var link = item.contentDetails.upload.videoId;
+						var videoId = item.id.videoId;
 						var title = item.snippet.title;
 
-						getLink(link, hasDisplay).then(url => {
+						getLink(videoId, hasDisplay).then(url => {
 							if (url == null) {
 								resolve(res.speak("Video wasn't found. Try again later").getResponse());
 								return;
@@ -110,9 +118,109 @@ exports.requestHandlers = [
 	}
 },
 {
+	name: "PlayMostViewedTaleIntent",
+	_handle(handlerInput, user, slots, res, hasDisplay) {
+		return new Promise((resolve, reject) => {
+			httpsRequest(replaceParameters(youtubeAPIUrl, {
+					api_key: config.youtube_api_key, 
+					channel_id: config.youtube_channel,
+					order: "viewCount"
+				}))
+				.then(body => {
+					if (!body.items) {
+						resolve(res.speak("Something went wrong. Try again later").getResponse());
+					} else if (body.items.length == 0) {
+						resolve(res.speak("Channel is empty.").getResponse());
+					} else {
+						if ((handlerInput.__latestCount || 0) > body.items.length) {
+							resolve(res.speak("Playlist ended.").getResponse());
+							return;
+						}
+						var item = body.items.filter(item => item.snippet.type == "upload")[handlerInput.__latestCount || 0];
+
+						var videoId = item.id.videoId;
+						var title = item.snippet.title;
+
+						getLink(videoId, hasDisplay).then(url => {
+							if (url == null) {
+								resolve(res.speak("Video wasn't found. Try again later").getResponse());
+								return;
+							}
+
+							var data = playerData[user.userId] = {};
+							data.query = "mostViewed";
+							data.queryValue = handlerInput.__latestCount || 0;
+							data.current = url;
+							data.offset = 0;
+							data.title = title;
+
+							if (hasDisplay)
+								resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
+							else
+								resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", data, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
+						})
+					}
+				});
+		});
+	}
+},
+{
+	name: "PlayMostLikedTaleIntent",
+	_handle(handlerInput, user, slots, res, hasDisplay) {
+		return new Promise((resolve, reject) => {
+			httpsRequest(replaceParameters(youtubeAPIUrl, {
+					api_key: config.youtube_api_key, 
+					channel_id: config.youtube_channel,
+					order: "rating"
+				}))
+				.then(body => {
+					if (!body.items) {
+						resolve(res.speak("Something went wrong. Try again later").getResponse());
+					} else if (body.items.length == 0) {
+						resolve(res.speak("Channel is empty.").getResponse());
+					} else {
+						if ((handlerInput.__latestCount || 0) > body.items.length) {
+							resolve(res.speak("Playlist ended.").getResponse());
+							return;
+						}
+						var item = body.items.filter(item => item.snippet.type == "upload")[handlerInput.__latestCount || 0];
+
+						var videoId = item.id.videoId;
+						var title = item.snippet.title;
+
+						getLink(videoId, hasDisplay).then(url => {
+							if (url == null) {
+								resolve(res.speak("Video wasn't found. Try again later").getResponse());
+								return;
+							}
+
+							var data = playerData[user.userId] = {};
+							data.query = "mostLiked";
+							data.queryValue = handlerInput.__latestCount || 0;
+							data.current = url;
+							data.offset = 0;
+							data.title = title;
+
+							if (hasDisplay)
+								resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
+							else
+								resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", data, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
+						})
+					}
+				});
+		});
+	}
+},
+{
 	name: "AMAZON.FallbackIntent", 
 	_handle(handlerInput, user, slots, res) {
 		return res.speak("Sorry, say again.").reprompt().getResponse();
+	}
+},
+{
+	name: "AMAZON.CancelIntent",
+	_handle(handlerInput, user, slots, res) {
+		return res.speak("Cancelled.").getResponse();
 	}
 },
 {
@@ -178,6 +286,18 @@ exports.requestHandlers = [
 			return new Promise((resolve, reject) => {
 				handlerInput.__latestCount = data.queryValue+1;
 				exports.requestHandlers.filter(h => h.name == "PlayLatestTaleIntent")[0].handle(handlerInput)
+					.then(resolve);
+			})
+		} else if (data.query == "mostViewed") {
+			return new Promise((resolve, reject) => {
+				handlerInput.__latestCount = data.queryValue+1;
+				exports.requestHandlers.filter(h => h.name == "PlayMostViewedTaleIntent")[0].handle(handlerInput)
+					.then(resolve);
+			})
+		} else if (data.query == "mostLiked") {
+			return new Promise((resolve, reject) => {
+				handlerInput.__latestCount = data.queryValue+1;
+				exports.requestHandlers.filter(h => h.name == "PlayMostLikedTaleIntent")[0].handle(handlerInput)
 					.then(resolve);
 			})
 		}
