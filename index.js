@@ -42,7 +42,7 @@ http.createServer((req, res) => {
 });
 
 function exitHandler(options, err) {
-	if (err instanceof Error) {
+	if (err) {
 		console.dir(err);
 	}
 	saveJSONFile("config.json", config);
