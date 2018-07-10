@@ -44,7 +44,7 @@ exports.requestHandlers = [
 },
 {
 	name: "PlayRandomTaleIntent",
-	_handle(handlerInput, user, slots, res, hasDisplay) {
+	_handle(handlerInput, user, slots, res, hasDisplay, hasVideoApp) {
 		return new Promise((resolve, reject) => {
 			httpsRequest(replaceParameters(youtubeAPIUrl, {
 					api_key: config.youtube_api_key, 
@@ -79,7 +79,7 @@ exports.requestHandlers = [
 
 							if (!handlerInput.__latestCount)
 								res = res.speak("Playing " + playerData[user.userId].query.replace(/([a-z])([A-Z])/g,"$1 $2") + " tale");
-							if (hasDisplay)
+							if (hasVideoApp)
 								resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
 							else
 								resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", url, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
@@ -91,7 +91,7 @@ exports.requestHandlers = [
 },
 {
 	name: "PlayLatestTaleIntent",
-	_handle(handlerInput, user, slots, res, hasDisplay) {
+	_handle(handlerInput, user, slots, res, hasDisplay, hasVideoApp) {
 		return new Promise((resolve, reject) => {
 			httpsRequest(replaceParameters(youtubeAPIUrl, {
 					api_key: config.youtube_api_key, 
@@ -131,7 +131,7 @@ exports.requestHandlers = [
 
 							if (!handlerInput.__latestCount)
 								res = res.speak("Playing " + playerData[user.userId].query.replace(/([a-z])([A-Z])/g,"$1 $2") + " tale");
-							if (hasDisplay)
+							if (hasVideoApp)
 								resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
 							else
 								resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", url, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
@@ -143,7 +143,7 @@ exports.requestHandlers = [
 },
 {
 	name: "PlayMostViewedTaleIntent",
-	_handle(handlerInput, user, slots, res, hasDisplay) {
+	_handle(handlerInput, user, slots, res, hasDisplay, hasVideoApp) {
 		return new Promise((resolve, reject) => {
 			httpsRequest(replaceParameters(youtubeAPIUrl, {
 					api_key: config.youtube_api_key, 
@@ -184,7 +184,7 @@ exports.requestHandlers = [
 							if (!handlerInput.__latestCount)
 								res = res.speak("Playing " + playerData[user.userId].query.replace(/([a-z])([A-Z])/g,"$1 $2") + " tale");
 
-							if (hasDisplay)
+							if (hasVideoApp)
 								resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
 							else
 								resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", url, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
@@ -196,7 +196,7 @@ exports.requestHandlers = [
 },
 {
 	name: "PlayMostLikedTaleIntent",
-	_handle(handlerInput, user, slots, res, hasDisplay) {
+	_handle(handlerInput, user, slots, res, hasDisplay, hasVideoApp) {
 		return new Promise((resolve, reject) => {
 			httpsRequest(replaceParameters(youtubeAPIUrl, {
 					api_key: config.youtube_api_key, 
@@ -235,7 +235,7 @@ exports.requestHandlers = [
 
 							if (!handlerInput.__latestCount)
 								res = res.speak("Playing " + playerData[user.userId].query.replace(/([a-z])([A-Z])/g,"$1 $2") + " tale");
-							if (hasDisplay)
+							if (hasVideoApp)
 								resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
 							else
 								resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", url, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
@@ -247,7 +247,7 @@ exports.requestHandlers = [
 },
 {
 	name: "ListPlaylistsIntent",
-	_handle(handlerInput, user, slots, res, hasDisplay) {
+	_handle(handlerInput, user, slots, res, hasDisplay, hasVideoApp) {
 		return new Promise((resolve, reject) => {
 			httpsRequest(replaceParameters(youtubeAPIPlaylistsList, {
 				api_key: config.youtube_api_key,
@@ -282,7 +282,7 @@ exports.requestHandlers = [
 },
 {
 	name: "PlayPlaylistIntent",
-	_handle(handlerInput, user, slots, res, hasDisplay) {
+	_handle(handlerInput, user, slots, res, hasDisplay, hasVideoApp) {
 		var number = parseInt(handlerInput.__playlistIndex || slotValue(slots.number));
 		var plId = null;
 		if (!playerData[user.userId] || !playerData[user.userId].data ||
@@ -332,7 +332,7 @@ exports.requestHandlers = [
 
 							if (!handlerInput.__latestCount)
 								res = res.speak("Playing tales from " + number + ord(number) + " playlist");
-							if (hasDisplay)
+							if (hasVideoApp)
 								resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
 							else
 								resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", url, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
@@ -393,7 +393,7 @@ exports.requestHandlers = [
 {
 	name: "AMAZON.ResumeIntent",
 	alternatives: "AudioPlayer.PlayCommandIssued",
-	_handle(handlerInput, user, slots, res, hasDisplay) {
+	_handle(handlerInput, user, slots, res, hasDisplay, hasVideoApp) {
 		var data = playerData[user.userId];
 		if (!data || hasDisplay)
 			return res.getResponse();
@@ -573,7 +573,7 @@ exports.requestHandlers = [
 	name: "CommentValueIntent",
 	_handle(handlerInput, user, slots, res) {
 		var attr = handlerInput.attributesManager.getSessionAttributes();
-		if (!attr.lastRequest || attr.lastRequest !== "LeaveCommentIntent") {
+		if (!attr.lastRequest || !(attr.lastRequest == "LeaveCommentIntent" || attr.lastRequest == "CommentRepeatIntent")) {
 			return res.speak("Sorry, say again.").reprompt().getResponse();	 // FallbackIntent
 		}
 
@@ -608,6 +608,18 @@ exports.requestHandlers = [
 	name: "CommentRefuseIntent",
 	_handle(handlerInput, user, slots, res) {
 		return res.speak("Ok.").getResponse();
+	}
+},
+{
+	name: "CommentRepeatIntent",
+	_handle(handlerInput, user, slots, res) {
+		var attr = handlerInput.attributesManager.getSessionAttributes();
+		if (!attr.lastRequest || attr.lastRequest !== "CommentValueIntent")
+			return res.speak("Sorry, say again.").reprompt().getResponse(); // FallbackIntent
+		if (!playerData[user.userId] || !playerData[user.userId].currentVideoId)
+			return res.speak("There are no tales playing right now").getResponse();
+
+		return res.speak("Okay, I'm listening again.").reprompt().getResponse();
 	}
 }
 ];
@@ -744,10 +756,11 @@ exports.requestHandlers.forEach(handler => {
 	}
 
 	handler.handle = function (handlerInput) {
-		var hasDisplay = Object.keys(handlerInput.requestEnvelope.context.System.device.supportedInterfaces).indexOf("VideoApp")>=0;
+		var hasVideoApp = Object.keys(handlerInput.requestEnvelope.context.System.device.supportedInterfaces).indexOf("VideoApp")>=0;
+		var hasDisplay = Object.keys(handlerInput.requestEnvelope.context.System.device.supportedInterfaces).indexOf("Display")>=0;
 		var user = handlerInput.requestEnvelope.context.System.user;
 		var slots = handlerInput.requestEnvelope.request.intent ? handlerInput.requestEnvelope.request.intent.slots : null;
-		var res = handler._handle(handlerInput, user, slots, handlerInput.responseBuilder, hasDisplay);
+		var res = handler._handle(handlerInput, user, slots, handlerInput.responseBuilder, hasDisplay, hasVideoApp);
 		if (res instanceof Promise) {
 			return new Promise((resolve, reject) => {
 				res.then(response => {
