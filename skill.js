@@ -149,48 +149,48 @@ exports.requestHandlers = [
 					api_key: config.youtube_api_key, 
 					channel_id: config.youtube_channel,
 					order: "viewCount"
-				}))
-				.then(body => {
-					if (!body.items) {
-						resolve(res.speak("Something went wrong. Try again later").getResponse());
-						console.log("error response", body);
-					} else if (body.items.length == 0) {
-						resolve(res.speak("Channel is empty.").getResponse());
-					} else {
-						if ((handlerInput.__latestCount || 0) > body.items.length) {
-							resolve(res.speak("Playlist ended.").getResponse());
+			}))
+			.then(body => {
+				if (!body.items) {
+					resolve(res.speak("Something went wrong. Try again later").getResponse());
+					console.log("error response", body);
+				} else if (body.items.length == 0) {
+					resolve(res.speak("Channel is empty.").getResponse());
+				} else {
+					if ((handlerInput.__latestCount || 0) > body.items.length) {
+						resolve(res.speak("Playlist ended.").getResponse());
+						return;
+					}
+					var item = body.items[handlerInput.__latestCount || 0];
+
+					var videoId = item.id.videoId;
+					var title = item.snippet.title;
+
+					getLink(videoId, hasDisplay).then(url => {
+						if (url == null) {
+							resolve(res.speak("Video wasn't found. Try again later").getResponse());
 							return;
 						}
-						var item = body.items[handlerInput.__latestCount || 0];
 
-						var videoId = item.id.videoId;
-						var title = item.snippet.title;
+						var data = playerData[user.userId] = {};
+						data.query = "mostViewed";
+						data.queryValue = handlerInput.__latestCount || 0;
+						data.current = url;
+						data.offset = 0;
+						data.title = title;
+						data.currentVideoId = videoId;
+						playerData[user.userId] = data;
 
-						getLink(videoId, hasDisplay).then(url => {
-							if (url == null) {
-								resolve(res.speak("Video wasn't found. Try again later").getResponse());
-								return;
-							}
+						if (!handlerInput.__latestCount)
+							res = res.speak("Playing " + playerData[user.userId].query.replace(/([a-z])([A-Z])/g,"$1 $2") + " tale");
 
-							var data = playerData[user.userId] = {};
-							data.query = "mostViewed";
-							data.queryValue = handlerInput.__latestCount || 0;
-							data.current = url;
-							data.offset = 0;
-							data.title = title;
-							data.currentVideoId = videoId;
-							playerData[user.userId] = data;
-
-							if (!handlerInput.__latestCount)
-								res = res.speak("Playing " + playerData[user.userId].query.replace(/([a-z])([A-Z])/g,"$1 $2") + " tale");
-
-							if (hasVideoApp)
-								resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
-							else
-								resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", url, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
-						})
-					}
-				});
+						if (hasVideoApp)
+							resolve(res.addVideoAppLaunchDirective(url, title).getResponse());
+						else
+							resolve(res.addAudioPlayerPlayDirective("REPLACE_ALL", url, randomString(16), 0, null, {title: title, subtitle: "Tale Player"}).getResponse())
+					})
+				}
+			});
 		});
 	}
 },
